@@ -4,7 +4,16 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 <title>BONA · Conquistá La Lucila</title>
-<meta name="theme-color" content="#0a100c">
+<meta name="theme-color" content="#0a0e1a" id="meta-theme-color">
+<script>
+(function(){
+  try{
+    var t = localStorage.getItem('reparto-veredas-lalucila-theme');
+    if(!t){ t = (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) ? 'light' : 'dark'; }
+    if(t === 'light'){ document.documentElement.setAttribute('data-theme','light'); }
+  }catch(e){}
+})();
+</script>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -15,19 +24,42 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
 <style>
   :root{
-    --ink:#0e1712;
-    --paper:#0a100c;
-    --line:#2a3b30;
-    --brand:#39c37a;
-    --brand-dim:#1f7a4d;
-    --brand-dark:#0c1f16;
-    --accent:#f2b134;
-    --spray:#ff5c3d;
-    --done-a:#39c37a;
-    --card:#10201a;
-    --card-2:#152a20;
-    --text:#e9f5ee;
-    --text-dim:#8fa89b;
+    /* modo noche (default) — graffiti bajo luz de mercurio */
+    --paper:#0a0e1a;
+    --card:#121a2c;
+    --card-2:#182440;
+    --line:#2c3a5c;
+    --brand:#2dd4bf;        /* teal — territorio conquistado */
+    --brand-dim:#158f80;
+    --brand-rgb:45,212,191;
+    --accent:#fbbf24;       /* ámbar — rango / xp */
+    --accent-rgb:251,191,36;
+    --spray:#ff4d94;        /* magenta — tag, combos, hype */
+    --danger:#ff6b6b;       /* reiniciar */
+    --locate:#38bdf8;       /* celeste — tu ubicación */
+    --free:#57678c;         /* territorio libre */
+    --halo:rgba(4,8,20,0.55);
+    --text:#eef3fb;
+    --text-dim:#8fa0c2;
+  }
+  :root[data-theme="light"]{
+    /* modo día — vereda al sol */
+    --paper:#f3efe2;
+    --card:#ffffff;
+    --card-2:#f0ebd9;
+    --line:#ddd5bd;
+    --brand:#059669;        /* verde esmeralda — territorio conquistado */
+    --brand-dim:#047a57;
+    --brand-rgb:5,150,105;
+    --accent:#d97706;       /* ámbar oscuro — rango / xp, legible en blanco */
+    --accent-rgb:217,119,6;
+    --spray:#db2777;        /* magenta profundo */
+    --danger:#dc2626;
+    --locate:#0284c7;
+    --free:#64708a;         /* territorio libre, contrasta con mapa claro */
+    --halo:rgba(255,255,255,0.85);
+    --text:#182118;
+    --text-dim:#5c6a58;
   }
   @import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
@@ -46,8 +78,8 @@
     inset:0;
     overflow:hidden;
     background:
-      radial-gradient(ellipse at 20% 0%, rgba(57,195,122,0.10), transparent 55%),
-      radial-gradient(ellipse at 100% 100%, rgba(242,177,52,0.06), transparent 50%),
+      radial-gradient(ellipse at 20% 0%, rgba(var(--brand-rgb),0.10), transparent 55%),
+      radial-gradient(ellipse at 100% 100%, rgba(var(--accent-rgb),0.06), transparent 50%),
       var(--paper);
   }
 
@@ -69,7 +101,7 @@
 
   header{
     position:relative; z-index:20;
-    background:linear-gradient(180deg, #0c1f16 0%, #0a1712 100%);
+    background:linear-gradient(180deg, var(--card-2) 0%, var(--card) 100%);
     border-bottom:2px solid var(--brand-dim);
     padding:10px 14px 8px;
   }
@@ -83,7 +115,7 @@
   }
   .brand .title{
     font-family:'Archivo Black', sans-serif; font-size:17px; letter-spacing:-0.01em;
-    color:var(--text); text-shadow:0 0 14px rgba(57,195,122,0.35);
+    color:var(--text); text-shadow:0 0 14px rgba(var(--brand-rgb),0.35);
   }
 
   .rank-badge{
@@ -119,7 +151,7 @@
     background:linear-gradient(90deg, var(--brand-dim), var(--brand));
     border-radius:5px;
     transition:width .5s cubic-bezier(.2,.9,.3,1.3);
-    box-shadow:0 0 10px rgba(57,195,122,0.6);
+    box-shadow:0 0 10px rgba(var(--brand-rgb),0.6);
   }
   #xpbar-label{
     font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700; color:var(--text-dim);
@@ -127,7 +159,7 @@
   }
   #xpbar-label b{ color:var(--accent); }
 
-  #map{ position:absolute; inset:0; z-index:1; background:#1a1a18; }
+  #map{ position:absolute; inset:0; z-index:1; background:var(--card); }
 
   #status{
     position:absolute; top:10px; left:50%; transform:translateX(-50%) translateY(-6px); z-index:16;
@@ -149,11 +181,13 @@
     box-shadow:0 2px 10px rgba(0,0,0,0.4);
   }
   #legend .row{ display:flex; align-items:center; gap:6px; color:var(--text-dim); }
-  #legend .sw{ width:16px; height:4px; border-radius:2px; display:inline-block; }
+  #legend .sw{ width:16px; height:4px; border-radius:2px; display:inline-block; background:var(--free); }
+  #legend .sw.done{ background:var(--brand); height:6px; box-shadow:0 0 6px rgba(var(--brand-rgb),0.6); }
+  #legend .sw.locate{ width:8px; height:8px; border-radius:50%; background:var(--locate); box-shadow:0 0 6px rgba(56,189,248,0.6); }
 
   #toolbar{
     position:absolute; bottom:16px; left:50%; transform:translateX(-50%);
-    z-index:15; display:flex; gap:8px;
+    z-index:15; display:flex; gap:6px; flex-wrap:wrap; justify-content:center; max-width:94vw;
     background:var(--card); padding:6px; border-radius:14px;
     box-shadow:0 4px 20px rgba(0,0,0,0.5); border:1px solid var(--brand-dim);
   }
@@ -162,8 +196,9 @@
     padding:9px 13px; border-radius:9px; border:none; background:transparent; color:var(--text);
     cursor:pointer; display:flex; align-items:center; gap:5px; white-space:nowrap;
   }
-  .toolbtn.danger{ color:#ff8a7a; }
+  .toolbtn.danger{ color:var(--danger); }
   .toolbtn.gold{ color:var(--accent); }
+  .toolbtn.active{ background:var(--locate); color:#04141c; }
 
   /* level up celebration overlay */
   #levelup{
@@ -183,7 +218,7 @@
     max-width:300px;
     transform:scale(0.85);
     transition:transform .35s cubic-bezier(.2,.9,.3,1.4);
-    box-shadow:0 0 60px rgba(242,177,52,0.25);
+    box-shadow:0 0 60px rgba(var(--accent-rgb),0.25);
   }
   #levelup.show .card{ transform:scale(1); }
   #levelup .eyebrow{
@@ -206,8 +241,10 @@
     background:var(--card) !important; color:var(--text) !important; border-color:var(--line) !important;
   }
   .leaflet-control-zoom{ margin-bottom:78px !important; }
-  .leaflet-control-attribution{ background:rgba(10,16,12,0.75) !important; color:var(--text-dim) !important; }
-  .leaflet-control-attribution a{ color:var(--text-dim) !important; }
+  .leaflet-control-attribution{ background:rgba(10,16,12,0.75) !important; color:#c7d2e0 !important; }
+  .leaflet-control-attribution a{ color:#c7d2e0 !important; }
+  :root[data-theme="light"] .leaflet-control-attribution{ background:rgba(255,255,255,0.8) !important; color:#3a4438 !important; }
+  :root[data-theme="light"] .leaflet-control-attribution a{ color:#3a4438 !important; }
 </style>
 </head>
 <body>
@@ -237,12 +274,18 @@
     <div id="map"></div>
     <div id="status"></div>
     <div id="legend">
-      <div class="row"><span class="sw" style="background:#5a5850;"></span> territorio libre</div>
-      <div class="row"><span class="sw" style="background:var(--done-a); height:6px; box-shadow:0 0 6px rgba(57,195,122,0.6);"></span> tuyo</div>
+      <div class="row"><span class="sw"></span> territorio libre</div>
+      <div class="row"><span class="sw done"></span> tuyo</div>
+      <div class="row"><span class="sw locate"></span> vos</div>
     </div>
     <div id="toolbar">
-      <button class="toolbtn" id="btn-hint">👆 marcá tu territorio</button>
-      <button class="toolbtn danger" id="btn-reset">🗑 reiniciar</button>
+      <button class="toolbtn" id="btn-theme" title="modo día/noche">🌙</button>
+      <button class="toolbtn" id="btn-locate" title="mostrar mi ubicación">📍</button>
+      <button class="toolbtn" id="btn-hint" title="cómo se usa">👆</button>
+      <button class="toolbtn" id="btn-export" title="exportar progreso">📤</button>
+      <button class="toolbtn" id="btn-import" title="importar progreso">📥</button>
+      <button class="toolbtn danger" id="btn-reset" title="reiniciar progreso">🗑</button>
+      <input type="file" id="import-input" accept="application/json,.json" style="display:none">
     </div>
   </div>
 
@@ -263,8 +306,20 @@
 (function(){
 
   const STORAGE_KEY = 'reparto-veredas-lalucila-v2';
+  const THEME_KEY = 'reparto-veredas-lalucila-theme';
   const CENTER = [-34.4983, -58.4882];
   const ZOOM = 16;
+
+  // ---------- TEMA (día/noche) ----------
+  const STREET_COLORS = {
+    dark:  { done:'#2dd4bf', free:'#57678c', halo:'rgba(4,8,20,0.55)' },
+    light: { done:'#059669', free:'#64708a', halo:'rgba(255,255,255,0.85)' }
+  };
+  const TILE_SOURCES = {
+    dark:  { base:'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', labels:'https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png' },
+    light: { base:'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', labels:'https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png' }
+  };
+  let theme = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
 
   // ---------- RANK SYSTEM ----------
   const RANKS = [
@@ -336,35 +391,44 @@
   window.addEventListener('resize', ()=>{ layoutMap(); map.invalidateSize(); });
   window.addEventListener('orientationchange', ()=> setTimeout(()=>{ layoutMap(); map.invalidateSize(); }, 200));
 
-  const tileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
-    maxZoom: 19,
-    attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
-  }).addTo(map);
-
   map.createPane('labelsPane');
   map.getPane('labelsPane').style.zIndex = 650;
   map.getPane('labelsPane').style.pointerEvents = 'none';
 
-  const labelsLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png', {
-    maxZoom: 19,
-    pane: 'labelsPane'
-  }).addTo(map);
-
+  let tileLayer = null;
+  let labelsLayer = null;
   let tileErrorCount = 0;
   let fallbackActive = false;
-  tileLayer.on('tileerror', function(){
-    tileErrorCount++;
-    if(tileErrorCount >= 4 && !fallbackActive){
-      fallbackActive = true;
-      showStatus('cambiando de mapa, aguantá');
-      map.removeLayer(tileLayer);
-      map.removeLayer(labelsLayer);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '&copy; OpenStreetMap contributors'
-      }).addTo(map);
-    }
-  });
+
+  function buildTileLayers(t){
+    if(tileLayer) map.removeLayer(tileLayer);
+    if(labelsLayer) map.removeLayer(labelsLayer);
+    tileErrorCount = 0;
+    fallbackActive = false;
+    const src = TILE_SOURCES[t] || TILE_SOURCES.dark;
+    tileLayer = L.tileLayer(src.base, {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
+    }).addTo(map);
+    labelsLayer = L.tileLayer(src.labels, {
+      maxZoom: 19,
+      pane: 'labelsPane'
+    }).addTo(map);
+    tileLayer.on('tileerror', function(){
+      tileErrorCount++;
+      if(tileErrorCount >= 4 && !fallbackActive){
+        fallbackActive = true;
+        showStatus('cambiando de mapa, aguantá');
+        map.removeLayer(tileLayer);
+        map.removeLayer(labelsLayer);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19,
+          attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+      }
+    });
+  }
+  buildTileLayers(theme);
 
   if(location.protocol === 'file:'){
     showStatus('abrí esto desde Netlify, no como archivo local', {ms:5000});
@@ -392,15 +456,34 @@
 
   function styleFor(key){
     const done = markedIds.has(key);
+    const c = STREET_COLORS[theme];
     return {
-      color: done ? '#39c37a' : '#5a5850',
+      color: done ? c.done : c.free,
       weight: done ? 7 : 5,
-      opacity: done ? 1 : 0.55,
+      opacity: done ? 1 : 0.7,
       lineCap: 'round'
     };
   }
 
+  function styleForHalo(key){
+    const done = markedIds.has(key);
+    const c = STREET_COLORS[theme];
+    return {
+      color: c.halo,
+      weight: done ? 11 : 9,
+      opacity: 1,
+      lineCap: 'round',
+      interactive: false
+    };
+  }
+
   const sideLayers = {};
+  const haloLayers = {};
+
+  function restyleAllSides(){
+    Object.entries(sideLayers).forEach(([key, layer])=> layer.setStyle(styleFor(key)));
+    Object.entries(haloLayers).forEach(([key, layer])=> layer.setStyle(styleForHalo(key)));
+  }
 
   let totalSides = 0;
   let currentRank = RANKS[0];
@@ -471,6 +554,8 @@
     }
     const layer = sideLayers[key];
     if(layer) layer.setStyle(styleFor(key));
+    const halo = haloLayers[key];
+    if(halo) halo.setStyle(styleForHalo(key));
     updateStats();
     saveState();
   }
@@ -486,6 +571,9 @@
       const hitbox = L.polyline(pts, { color:'#000', opacity:0, weight:22, lineCap:'round' });
       hitbox.addTo(map);
 
+      const halo = L.polyline(pts, styleForHalo(key));
+      halo.addTo(map);
+
       const line = L.polyline(pts, styleFor(key));
       line.addTo(map);
 
@@ -494,18 +582,153 @@
       line.on('click', onTap);
 
       sideLayers[key] = line;
+      haloLayers[key] = halo;
     });
   });
 
   currentRank = rankForPct(totalSides ? Math.round((markedIds.size/totalSides)*100) : 0);
   updateStats();
 
+  // ---------- TEMA (aplicar) ----------
+  function applyTheme(t, opts={}){
+    theme = t;
+    document.documentElement.setAttribute('data-theme', t);
+    document.getElementById('btn-theme').textContent = t === 'light' ? '☀️' : '🌙';
+    const metaColor = document.getElementById('meta-theme-color');
+    if(metaColor) metaColor.setAttribute('content', t === 'light' ? '#f3efe2' : '#0a0e1a');
+    try{ localStorage.setItem(THEME_KEY, t); }catch(e){}
+    if(!opts.skipTiles) buildTileLayers(t);
+    restyleAllSides();
+    if(userMarker){
+      const c = getComputedStyle(document.documentElement).getPropertyValue('--locate').trim();
+      userMarker.setStyle({ fillColor: c });
+      userAccuracyCircle.setStyle({ color: c });
+    }
+  }
+
+  document.getElementById('btn-theme').addEventListener('click', ()=>{
+    applyTheme(theme === 'light' ? 'dark' : 'light');
+    showStatus(theme === 'light' ? 'modo día activado' : 'modo noche activado');
+  });
+
+  // ---------- UBICACIÓN ----------
+  let watchId = null;
+  let userMarker = null;
+  let userAccuracyCircle = null;
+  let following = false;
+  const btnLocate = document.getElementById('btn-locate');
+
+  function locateColor(){
+    return getComputedStyle(document.documentElement).getPropertyValue('--locate').trim() || '#38bdf8';
+  }
+
+  function ensureUserMarker(latlng, accuracy){
+    if(!userMarker){
+      userMarker = L.circleMarker(latlng, {
+        radius:7, weight:3, color:'#fff', fillColor: locateColor(),
+        fillOpacity:1, interactive:false
+      }).addTo(map);
+      userAccuracyCircle = L.circle(latlng, {
+        radius: accuracy || 30,
+        color: locateColor(),
+        weight:1, fillOpacity:0.12, interactive:false
+      }).addTo(map);
+    } else {
+      userMarker.setLatLng(latlng);
+      userAccuracyCircle.setLatLng(latlng);
+      userAccuracyCircle.setRadius(accuracy || 30);
+    }
+  }
+
+  btnLocate.addEventListener('click', ()=>{
+    if(!('geolocation' in navigator)){
+      showStatus('tu navegador no soporta ubicación');
+      return;
+    }
+    if(watchId !== null){
+      navigator.geolocation.clearWatch(watchId);
+      watchId = null;
+      following = false;
+      btnLocate.classList.remove('active');
+      showStatus('ubicación desactivada');
+      return;
+    }
+    showStatus('buscando tu ubicación...');
+    watchId = navigator.geolocation.watchPosition(
+      (pos)=>{
+        const latlng = [pos.coords.latitude, pos.coords.longitude];
+        ensureUserMarker(latlng, pos.coords.accuracy);
+        if(!following){
+          following = true;
+          btnLocate.classList.add('active');
+          map.setView(latlng, Math.max(map.getZoom(), 17));
+          showStatus('te estamos ubicando en el mapa');
+        }
+      },
+      ()=>{
+        showStatus('no pudimos acceder a tu ubicación');
+        watchId = null;
+        following = false;
+        btnLocate.classList.remove('active');
+      },
+      { enableHighAccuracy:true, maximumAge:5000, timeout:15000 }
+    );
+  });
+
+  // ---------- EXPORTAR / IMPORTAR ----------
+  document.getElementById('btn-export').addEventListener('click', ()=>{
+    const payload = {
+      app: 'lalucila-progreso',
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      ids: Array.from(markedIds)
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type:'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `lalucila-progreso-${new Date().toISOString().slice(0,10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(()=> URL.revokeObjectURL(url), 1000);
+    showStatus('progreso exportado');
+  });
+
+  const importInput = document.getElementById('import-input');
+  document.getElementById('btn-import').addEventListener('click', ()=> importInput.click());
+  importInput.addEventListener('change', (e)=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      try{
+        const data = JSON.parse(reader.result);
+        const ids = Array.isArray(data.ids) ? data.ids : (Array.isArray(data) ? data : null);
+        if(!ids) throw new Error('formato inválido');
+        const validIds = ids.filter(id => id in sideLayers);
+        if(!validIds.length) throw new Error('sin veredas válidas');
+        if(!confirm(`Se van a sumar ${validIds.length} veredas importadas a tu progreso actual (no se pierde nada). ¿Continuar?`)) return;
+        validIds.forEach(id => markedIds.add(id));
+        restyleAllSides();
+        currentRank = rankForPct(totalSides ? Math.round((markedIds.size/totalSides)*100) : 0);
+        updateStats();
+        saveState();
+        showStatus(`se importaron ${validIds.length} veredas`);
+      }catch(err){
+        showStatus('el archivo no es un backup válido');
+      }
+      importInput.value = '';
+    };
+    reader.readAsText(file);
+  });
+
   // ---------- TOOLBAR ----------
   document.getElementById('btn-reset').addEventListener('click', ()=>{
     if(!confirm('¿Reiniciar todo el progreso en este equipo? Perdés el rango actual.')) return;
     markedIds = new Set();
     streak = 0;
-    Object.entries(sideLayers).forEach(([key, layer])=> layer.setStyle(styleFor(key)));
+    restyleAllSides();
     currentRank = RANKS[0];
     updateStats();
     saveState();
@@ -515,6 +738,8 @@
   document.getElementById('btn-hint').addEventListener('click', ()=>{
     showStatus('tocá cualquiera de las 2 líneas para marcar esa vereda', {ms:2400});
   });
+
+  applyTheme(theme, { skipTiles:true });
 
 })();
 
