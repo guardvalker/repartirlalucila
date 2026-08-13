@@ -35,6 +35,7 @@
     --accent:#fbbf24;       /* ámbar — rango / xp */
     --accent-rgb:251,191,36;
     --spray:#ff4d94;        /* magenta — tag, combos, hype */
+    --spray-rgb:255,77,148;
     --danger:#ff6b6b;       /* reiniciar */
     --locate:#38bdf8;       /* celeste — tu ubicación */
     --free:#57678c;         /* territorio libre */
@@ -53,6 +54,7 @@
     --accent:#d97706;       /* ámbar oscuro — rango / xp, legible en blanco */
     --accent-rgb:217,119,6;
     --spray:#db2777;        /* magenta profundo */
+    --spray-rgb:219,39,119;
     --danger:#dc2626;
     --locate:#0284c7;
     --free:#64708a;         /* territorio libre, contrasta con mapa claro */
@@ -299,6 +301,27 @@
   .leaflet-control-attribution a{ color:#c7d2e0 !important; }
   :root[data-theme="light"] .leaflet-control-attribution{ background:rgba(255,255,255,0.8) !important; color:#3a4438 !important; }
   :root[data-theme="light"] .leaflet-control-attribution a{ color:#3a4438 !important; }
+
+  /* animación de calle marcada/desmarcada */
+  .leaflet-overlay-pane path{
+    transition: stroke .32s ease, stroke-width .32s ease, stroke-opacity .32s ease;
+  }
+
+  @keyframes tapBurst{
+    0%{ transform:translate(-50%,-50%) scale(0.2); opacity:0.95; }
+    55%{ opacity:0.5; }
+    100%{ transform:translate(-50%,-50%) scale(2.6); opacity:0; }
+  }
+  .tap-burst{
+    position:absolute; z-index:12; left:0; top:0;
+    width:44px; height:44px; border-radius:50%;
+    pointer-events:none;
+    background:radial-gradient(circle, rgba(var(--spray-rgb),0.6) 0%, rgba(var(--spray-rgb),0.28) 42%, transparent 72%);
+    animation:tapBurst .55s cubic-bezier(.2,.7,.3,1) forwards;
+  }
+  .tap-burst.undo{
+    background:radial-gradient(circle, rgba(143,160,194,0.5) 0%, rgba(143,160,194,0.22) 42%, transparent 72%);
+  }
 </style>
 </head>
 <body>
@@ -375,8 +398,8 @@
 
   // ---------- TEMA (día/noche) ----------
   const STREET_COLORS = {
-    dark:  { done:'#2dd4bf', free:'#57678c' },
-    light: { done:'#059669', free:'#64708a' }
+    dark:  { done:'#2dd4bf', free:'#57678c', flash:'#ff4d94' },
+    light: { done:'#059669', free:'#64708a', flash:'#db2777' }
   };
   const TILE_SOURCES = {
     dark:  { base:'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', labels:'https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png' },
@@ -607,11 +630,25 @@
     if(e.target === levelsModal) levelsModal.classList.remove('show');
   });
 
-  function toggleSide(key){
-    if(markedIds.has(key)){
+  function spawnBurst(point, kind){
+    if(!point) return;
+    const el = document.createElement('div');
+    el.className = 'tap-burst' + (kind === 'undo' ? ' undo' : '');
+    el.style.left = point.x + 'px';
+    el.style.top = point.y + 'px';
+    document.getElementById('mapwrap').appendChild(el);
+    el.addEventListener('animationend', ()=> el.remove());
+  }
+
+  function toggleSide(key, e){
+    const layer = sideLayers[key];
+    const marking = !markedIds.has(key);
+
+    if(!marking){
       markedIds.delete(key);
       streak = 0;
       showStatus(UNDO_MESSAGES[Math.floor(Math.random()*UNDO_MESSAGES.length)]);
+      if(layer) layer.setStyle(styleFor(key));
     } else {
       markedIds.add(key);
       const now = Date.now();
@@ -628,9 +665,14 @@
       } else {
         showStatus(HYPE_MESSAGES[Math.floor(Math.random()*HYPE_MESSAGES.length)]);
       }
+
+      if(layer){
+        layer.setStyle({ color: STREET_COLORS[theme].flash, weight:11, opacity:1 });
+        setTimeout(()=>{ layer.setStyle(styleFor(key)); }, 220);
+      }
     }
-    const layer = sideLayers[key];
-    if(layer) layer.setStyle(styleFor(key));
+
+    spawnBurst(e && e.containerPoint, marking ? 'mark' : 'undo');
     updateStats();
     saveState();
   }
@@ -649,7 +691,7 @@
       const line = L.polyline(pts, styleFor(key));
       line.addTo(map);
 
-      function onTap(){ toggleSide(key); }
+      function onTap(e){ toggleSide(key, e); }
       hitbox.on('click', onTap);
       line.on('click', onTap);
 
