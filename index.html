@@ -307,20 +307,30 @@
     transition: stroke .32s ease, stroke-width .32s ease, stroke-opacity .32s ease;
   }
 
-  @keyframes tapBurst{
-    0%{ transform:translate(-50%,-50%) scale(0.2); opacity:0.95; }
-    55%{ opacity:0.5; }
-    100%{ transform:translate(-50%,-50%) scale(2.6); opacity:0; }
+  .tap-burst-wrap{ position:absolute; z-index:12; left:0; top:0; width:0; height:0; pointer-events:none; }
+
+  @keyframes tapGlow{
+    0%{ transform:translate(-50%,-50%) scale(0.2); opacity:0.9; }
+    100%{ transform:translate(-50%,-50%) scale(2.5); opacity:0; }
   }
-  .tap-burst{
-    position:absolute; z-index:12; left:0; top:0;
-    width:44px; height:44px; border-radius:50%;
-    pointer-events:none;
-    background:radial-gradient(circle, rgba(var(--spray-rgb),0.6) 0%, rgba(var(--spray-rgb),0.28) 42%, transparent 72%);
-    animation:tapBurst .55s cubic-bezier(.2,.7,.3,1) forwards;
+  .tap-glow{
+    position:absolute; left:0; top:0; width:44px; height:44px; border-radius:50%;
+    background:radial-gradient(circle, rgba(255,255,255,0.5) 0%, rgba(var(--spray-rgb),0.22) 45%, transparent 72%);
+    animation:tapGlow .5s cubic-bezier(.2,.7,.3,1) forwards;
   }
-  .tap-burst.undo{
-    background:radial-gradient(circle, rgba(143,160,194,0.5) 0%, rgba(143,160,194,0.22) 42%, transparent 72%);
+  .tap-glow.undo{
+    background:radial-gradient(circle, rgba(143,160,194,0.45) 0%, rgba(143,160,194,0.18) 45%, transparent 72%);
+  }
+
+  @keyframes tapDot{
+    0%{ transform:translate(-50%,-50%) scale(0.5); opacity:1; }
+    65%{ opacity:0.95; }
+    100%{ transform:translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(0.8); opacity:0; }
+  }
+  .tap-dot{
+    position:absolute; left:0; top:0; border-radius:50%;
+    box-shadow:0 0 5px currentColor;
+    animation:tapDot .6s cubic-bezier(.2,.7,.3,1) forwards;
   }
 </style>
 </head>
@@ -398,8 +408,8 @@
 
   // ---------- TEMA (día/noche) ----------
   const STREET_COLORS = {
-    dark:  { done:'#2dd4bf', free:'#57678c', flash:'#ff4d94' },
-    light: { done:'#059669', free:'#64708a', flash:'#db2777' }
+    dark:  { done:'#2dd4bf', free:'#57678c', flash:'#ff4d94', flash2:'#fbbf24' },
+    light: { done:'#059669', free:'#64708a', flash:'#db2777', flash2:'#d97706' }
   };
   const TILE_SOURCES = {
     dark:  { base:'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', labels:'https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png' },
@@ -630,14 +640,41 @@
     if(e.target === levelsModal) levelsModal.classList.remove('show');
   });
 
+  const BURST_PALETTE = ['var(--spray)', 'var(--accent)', 'var(--brand)', 'var(--locate)'];
+
   function spawnBurst(point, kind){
     if(!point) return;
-    const el = document.createElement('div');
-    el.className = 'tap-burst' + (kind === 'undo' ? ' undo' : '');
-    el.style.left = point.x + 'px';
-    el.style.top = point.y + 'px';
-    document.getElementById('mapwrap').appendChild(el);
-    el.addEventListener('animationend', ()=> el.remove());
+    const wrap = document.createElement('div');
+    wrap.className = 'tap-burst-wrap';
+    wrap.style.left = point.x + 'px';
+    wrap.style.top = point.y + 'px';
+
+    const glow = document.createElement('div');
+    glow.className = 'tap-glow' + (kind === 'undo' ? ' undo' : '');
+    wrap.appendChild(glow);
+
+    if(kind !== 'undo'){
+      const dotCount = 7;
+      for(let i=0; i<dotCount; i++){
+        const dot = document.createElement('div');
+        dot.className = 'tap-dot';
+        const angle = (360/dotCount)*i + (Math.random()*24 - 12);
+        const dist = 20 + Math.random()*22;
+        const rad = angle * Math.PI/180;
+        dot.style.setProperty('--tx', (Math.cos(rad)*dist).toFixed(1) + 'px');
+        dot.style.setProperty('--ty', (Math.sin(rad)*dist).toFixed(1) + 'px');
+        const size = 6 + Math.random()*6;
+        dot.style.width = size + 'px';
+        dot.style.height = size + 'px';
+        dot.style.background = BURST_PALETTE[i % BURST_PALETTE.length];
+        dot.style.color = BURST_PALETTE[i % BURST_PALETTE.length];
+        dot.style.animationDelay = Math.floor(Math.random()*40) + 'ms';
+        wrap.appendChild(dot);
+      }
+    }
+
+    document.getElementById('mapwrap').appendChild(wrap);
+    setTimeout(()=> wrap.remove(), 700);
   }
 
   function toggleSide(key, e){
@@ -667,8 +704,10 @@
       }
 
       if(layer){
-        layer.setStyle({ color: STREET_COLORS[theme].flash, weight:11, opacity:1 });
-        setTimeout(()=>{ layer.setStyle(styleFor(key)); }, 220);
+        const c = STREET_COLORS[theme];
+        layer.setStyle({ color: c.flash2, weight:11, opacity:1 });
+        setTimeout(()=>{ layer.setStyle({ color: c.flash, weight:11, opacity:1 }); }, 130);
+        setTimeout(()=>{ layer.setStyle(styleFor(key)); }, 300);
       }
     }
 
