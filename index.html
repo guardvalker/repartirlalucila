@@ -38,7 +38,6 @@
     --danger:#ff6b6b;       /* reiniciar */
     --locate:#38bdf8;       /* celeste — tu ubicación */
     --free:#57678c;         /* territorio libre */
-    --halo:rgba(4,8,20,0.55);
     --text:#eef3fb;
     --text-dim:#8fa0c2;
   }
@@ -57,7 +56,6 @@
     --danger:#dc2626;
     --locate:#0284c7;
     --free:#64708a;         /* territorio libre, contrasta con mapa claro */
-    --halo:rgba(255,255,255,0.85);
     --text:#182118;
     --text-dim:#5c6a58;
   }
@@ -281,7 +279,6 @@
     <div id="toolbar">
       <button class="toolbtn" id="btn-theme" title="modo día/noche">🌙</button>
       <button class="toolbtn" id="btn-locate" title="mostrar mi ubicación">📍</button>
-      <button class="toolbtn" id="btn-hint" title="cómo se usa">👆</button>
       <button class="toolbtn" id="btn-export" title="exportar progreso">📤</button>
       <button class="toolbtn" id="btn-import" title="importar progreso">📥</button>
       <button class="toolbtn danger" id="btn-reset" title="reiniciar progreso">🗑</button>
@@ -312,8 +309,8 @@
 
   // ---------- TEMA (día/noche) ----------
   const STREET_COLORS = {
-    dark:  { done:'#2dd4bf', free:'#57678c', halo:'rgba(4,8,20,0.55)' },
-    light: { done:'#059669', free:'#64708a', halo:'rgba(255,255,255,0.85)' }
+    dark:  { done:'#2dd4bf', free:'#57678c' },
+    light: { done:'#059669', free:'#64708a' }
   };
   const TILE_SOURCES = {
     dark:  { base:'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', labels:'https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png' },
@@ -465,24 +462,10 @@
     };
   }
 
-  function styleForHalo(key){
-    const done = markedIds.has(key);
-    const c = STREET_COLORS[theme];
-    return {
-      color: c.halo,
-      weight: done ? 11 : 9,
-      opacity: 1,
-      lineCap: 'round',
-      interactive: false
-    };
-  }
-
   const sideLayers = {};
-  const haloLayers = {};
 
   function restyleAllSides(){
     Object.entries(sideLayers).forEach(([key, layer])=> layer.setStyle(styleFor(key)));
-    Object.entries(haloLayers).forEach(([key, layer])=> layer.setStyle(styleForHalo(key)));
   }
 
   let totalSides = 0;
@@ -554,8 +537,6 @@
     }
     const layer = sideLayers[key];
     if(layer) layer.setStyle(styleFor(key));
-    const halo = haloLayers[key];
-    if(halo) halo.setStyle(styleForHalo(key));
     updateStats();
     saveState();
   }
@@ -571,9 +552,6 @@
       const hitbox = L.polyline(pts, { color:'#000', opacity:0, weight:22, lineCap:'round' });
       hitbox.addTo(map);
 
-      const halo = L.polyline(pts, styleForHalo(key));
-      halo.addTo(map);
-
       const line = L.polyline(pts, styleFor(key));
       line.addTo(map);
 
@@ -582,7 +560,6 @@
       line.on('click', onTap);
 
       sideLayers[key] = line;
-      haloLayers[key] = halo;
     });
   });
 
@@ -733,10 +710,6 @@
     updateStats();
     saveState();
     showStatus('arrancás de cero, a conquistar de nuevo');
-  });
-
-  document.getElementById('btn-hint').addEventListener('click', ()=>{
-    showStatus('tocá cualquiera de las 2 líneas para marcar esa vereda', {ms:2400});
   });
 
   applyTheme(theme, { skipTiles:true });
