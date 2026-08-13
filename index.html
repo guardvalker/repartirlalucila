@@ -122,7 +122,9 @@
     border:1px solid var(--brand-dim);
     border-radius:10px;
     padding:5px 10px 5px 6px;
+    cursor:pointer;
   }
+  .rank-badge:active{ background:var(--brand-dim); }
   .rank-badge .icon{
     width:26px; height:26px; border-radius:7px;
     background:linear-gradient(145deg, var(--brand), var(--brand-dim));
@@ -185,18 +187,22 @@
 
   #toolbar{
     position:absolute; bottom:16px; left:50%; transform:translateX(-50%);
-    z-index:15; display:flex; gap:6px; flex-wrap:wrap; justify-content:center; max-width:94vw;
+    z-index:15; display:flex; gap:7px; flex-wrap:nowrap; justify-content:center; max-width:94vw;
+    overflow-x:auto; -webkit-overflow-scrolling:touch;
     background:var(--card); padding:6px; border-radius:14px;
     box-shadow:0 4px 20px rgba(0,0,0,0.5); border:1px solid var(--brand-dim);
   }
   .toolbtn{
     font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700; letter-spacing:0.02em;
-    padding:9px 13px; border-radius:9px; border:none; background:transparent; color:var(--text);
-    cursor:pointer; display:flex; align-items:center; gap:5px; white-space:nowrap;
+    padding:9px 13px; border-radius:9px; border:1px solid var(--line); background:var(--card-2); color:var(--text);
+    cursor:pointer; display:flex; align-items:center; gap:5px; white-space:nowrap; flex-shrink:0;
+    transition:background .12s ease, border-color .12s ease;
   }
-  .toolbtn.danger{ color:var(--danger); }
+  .toolbtn:active{ background:var(--brand-dim); border-color:var(--brand); color:#04141c; }
+  .toolbtn.danger{ color:var(--danger); border-color:rgba(255,107,107,0.35); }
+  .toolbtn.danger:active{ background:var(--danger); border-color:var(--danger); color:#2b0a0a; }
   .toolbtn.gold{ color:var(--accent); }
-  .toolbtn.active{ background:var(--locate); color:#04141c; }
+  .toolbtn.active{ background:var(--locate); color:#04141c; border-color:var(--locate); }
 
   /* level up celebration overlay */
   #levelup{
@@ -235,6 +241,56 @@
     padding:11px 22px; cursor:pointer;
   }
 
+  /* levels menu */
+  #levels-modal{
+    position:absolute; inset:0; z-index:30;
+    display:flex; align-items:center; justify-content:center;
+    background:rgba(6,12,9,0.82);
+    opacity:0; pointer-events:none;
+    transition:opacity .2s ease;
+  }
+  #levels-modal.show{ opacity:1; pointer-events:auto; }
+  #levels-modal .card{
+    background:linear-gradient(160deg, var(--card-2), var(--card));
+    border:2px solid var(--brand-dim);
+    border-radius:16px;
+    padding:16px 16px 18px;
+    width:min(320px, 88vw);
+    max-height:78vh;
+    display:flex; flex-direction:column;
+    box-shadow:0 0 60px rgba(var(--brand-rgb),0.2);
+    transform:scale(0.9);
+    transition:transform .25s cubic-bezier(.2,.9,.3,1.4);
+  }
+  #levels-modal.show .card{ transform:scale(1); }
+  #levels-modal .modal-head{
+    display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;
+  }
+  #levels-modal .modal-x{
+    background:transparent; border:1px solid var(--line); color:var(--text-dim);
+    width:26px; height:26px; border-radius:8px; cursor:pointer; font-size:12px;
+    display:flex; align-items:center; justify-content:center;
+  }
+  #levels-modal .modal-x:active{ border-color:var(--danger); color:var(--danger); }
+  .levels-list{ overflow-y:auto; display:flex; flex-direction:column; gap:8px; }
+  .levels-list .item{
+    display:flex; align-items:center; gap:10px;
+    padding:9px 10px; border-radius:11px; border:1px solid var(--line); background:rgba(255,255,255,0.02);
+  }
+  .levels-list .item .ic{
+    width:32px; height:32px; border-radius:9px; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center; font-size:16px;
+    background:var(--card-2);
+  }
+  .levels-list .item .body{ display:flex; flex-direction:column; line-height:1.3; min-width:0; }
+  .levels-list .item .nm{ font-size:12.5px; font-weight:700; color:var(--text); }
+  .levels-list .item .req{ font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--text-dim); }
+  .levels-list .item.done .ic{ background:linear-gradient(145deg, var(--brand), var(--brand-dim)); }
+  .levels-list .item.current{ border-color:var(--accent); background:rgba(var(--accent-rgb),0.08); }
+  .levels-list .item.current .ic{ background:linear-gradient(145deg, var(--accent), var(--brand-dim)); }
+  .levels-list .item.current .nm{ color:var(--accent); }
+  .levels-list .item.locked{ opacity:0.55; }
+
   .leaflet-control-zoom a{
     background:var(--card) !important; color:var(--text) !important; border-color:var(--line) !important;
   }
@@ -254,7 +310,7 @@
         <span class="tag">BONA · zona norte</span>
         <span class="title">Conquistá La Lucila</span>
       </div>
-      <div class="rank-badge">
+      <div class="rank-badge" id="rank-badge" title="ver niveles">
         <div class="icon" id="rank-icon">🏠</div>
         <div class="info">
           <span class="lvl" id="rank-lvl">nivel 1</span>
@@ -293,6 +349,16 @@
       <div class="rank-name" id="lu-name">Rey de la cuadra</div>
       <div class="rank-msg" id="lu-msg">Ya nadie te para en esta zona, crack.</div>
       <button id="lu-close">seguir conquistando</button>
+    </div>
+  </div>
+
+  <div id="levels-modal">
+    <div class="card">
+      <div class="modal-head">
+        <span class="eyebrow">niveles</span>
+        <button id="levels-close" class="modal-x" title="cerrar">✕</button>
+      </div>
+      <div class="levels-list" id="levels-list"></div>
     </div>
   </div>
 </div>
@@ -511,6 +577,34 @@
 
   document.getElementById('lu-close').addEventListener('click', ()=>{
     document.getElementById('levelup').classList.remove('show');
+  });
+
+  function renderLevelsList(){
+    const list = document.getElementById('levels-list');
+    list.innerHTML = RANKS.map((r, i)=>{
+      const reqText = i === 0 ? 'desde el arranque' : `${r.min}% de veredas conquistadas`;
+      const idx = rankIndex(currentRank);
+      const state = r === currentRank ? 'current' : (i < idx ? 'done' : 'locked');
+      return `<div class="item ${state}">
+        <div class="ic">${r.icon}</div>
+        <div class="body">
+          <span class="nm">nivel ${i+1} · ${r.name}</span>
+          <span class="req">${reqText}</span>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  const levelsModal = document.getElementById('levels-modal');
+  document.getElementById('rank-badge').addEventListener('click', ()=>{
+    renderLevelsList();
+    levelsModal.classList.add('show');
+  });
+  document.getElementById('levels-close').addEventListener('click', ()=>{
+    levelsModal.classList.remove('show');
+  });
+  levelsModal.addEventListener('click', (e)=>{
+    if(e.target === levelsModal) levelsModal.classList.remove('show');
   });
 
   function toggleSide(key){
