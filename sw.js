@@ -1,4 +1,4 @@
-const CACHE = "lalucila-v1";
+const CACHE = "lalucila-v2";
 const ASSETS = ["./", "./index.html", "./manifest.json"];
 
 self.addEventListener("install", (event) => {
