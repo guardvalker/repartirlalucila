@@ -108,7 +108,12 @@
   .header-top{
     display:flex; align-items:center; justify-content:space-between; gap:10px;
   }
-  .brand{ display:flex; flex-direction:column; line-height:1.1; }
+  .brand{
+    display:flex; flex-direction:column; line-height:1.1;
+    cursor:pointer; -webkit-tap-highlight-color:transparent;
+    background:transparent; border:none; padding:0; text-align:left;
+  }
+  .brand:active .title{ color:var(--brand); }
   .brand .tag{
     font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:0.16em;
     text-transform:uppercase; color:var(--spray); font-weight:700;
@@ -116,6 +121,7 @@
   .brand .title{
     font-family:'Archivo Black', sans-serif; font-size:17px; letter-spacing:-0.01em;
     color:var(--text); text-shadow:0 0 14px rgba(var(--brand-rgb),0.35);
+    transition:color .12s ease;
   }
 
   .rank-badge{
@@ -227,7 +233,7 @@
     box-shadow:0 0 60px rgba(var(--accent-rgb),0.25);
   }
   #levelup.show .card{ transform:scale(1); }
-  #levelup .eyebrow{
+  #levelup .eyebrow, #whatsnew-modal .eyebrow, #version-modal .eyebrow{
     font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.18em;
     text-transform:uppercase; color:var(--spray); font-weight:700; margin-bottom:6px;
   }
@@ -244,15 +250,15 @@
   }
 
   /* levels menu */
-  #levels-modal, #whatsnew-modal{
+  #levels-modal, #whatsnew-modal, #version-modal{
     position:absolute; inset:0; z-index:30;
     display:flex; align-items:center; justify-content:center;
     background:rgba(6,12,9,0.82);
     opacity:0; pointer-events:none;
     transition:opacity .2s ease;
   }
-  #levels-modal.show, #whatsnew-modal.show{ opacity:1; pointer-events:auto; }
-  #levels-modal .card, #whatsnew-modal .card{
+  #levels-modal.show, #whatsnew-modal.show, #version-modal.show{ opacity:1; pointer-events:auto; }
+  #levels-modal .card, #whatsnew-modal .card, #version-modal .card{
     background:linear-gradient(160deg, var(--card-2), var(--card));
     border:2px solid var(--brand-dim);
     border-radius:16px;
@@ -264,16 +270,23 @@
     transform:scale(0.9);
     transition:transform .25s cubic-bezier(.2,.9,.3,1.4);
   }
-  #levels-modal.show .card, #whatsnew-modal.show .card{ transform:scale(1); }
-  #levels-modal .modal-head, #whatsnew-modal .modal-head{
+  #levels-modal.show .card, #whatsnew-modal.show .card, #version-modal.show .card{ transform:scale(1); }
+  #levels-modal .modal-head, #whatsnew-modal .modal-head, #version-modal .modal-head{
     display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;
   }
-  #levels-modal .modal-x, #whatsnew-modal .modal-x{
+  #levels-modal .modal-x, #whatsnew-modal .modal-x, #version-modal .modal-x{
     background:transparent; border:1px solid var(--line); color:var(--text-dim);
     width:26px; height:26px; border-radius:8px; cursor:pointer; font-size:12px;
     display:flex; align-items:center; justify-content:center;
   }
-  #levels-modal .modal-x:active, #whatsnew-modal .modal-x:active{ border-color:var(--danger); color:var(--danger); }
+  #levels-modal .modal-x:active, #whatsnew-modal .modal-x:active, #version-modal .modal-x:active{ border-color:var(--danger); color:var(--danger); }
+  .version-history-group{ margin-bottom:10px; }
+  .version-history-group .v{
+    font-family:'JetBrains Mono',monospace; font-size:10.5px; font-weight:700;
+    color:var(--accent); margin-bottom:4px;
+  }
+  #version-refresh-btn{ margin-top:14px; justify-content:center; width:100%; }
+  #version-refresh-btn:disabled{ opacity:0.6; }
   .levels-list{ overflow-y:auto; display:flex; flex-direction:column; gap:8px; }
   .whatsnew-version{
     font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--text-dim);
@@ -345,10 +358,10 @@
 <div id="app">
   <header>
     <div class="header-top">
-      <div class="brand">
+      <button class="brand" id="brand-badge" title="ver versión / buscar actualización">
         <span class="tag">BONA · zona norte</span>
         <span class="title">Conquistá La Lucila</span>
-      </div>
+      </button>
       <div class="rank-badge" id="rank-badge" title="ver niveles">
         <div class="icon" id="rank-icon">🏠</div>
         <div class="info">
@@ -411,6 +424,18 @@
       <ul class="whatsnew-list" id="whatsnew-list"></ul>
     </div>
   </div>
+
+  <div id="version-modal">
+    <div class="card">
+      <div class="modal-head">
+        <span class="eyebrow">versión instalada</span>
+        <button id="version-close" class="modal-x" title="cerrar">✕</button>
+      </div>
+      <div class="whatsnew-version">versión <span id="version-num-current"></span></div>
+      <div id="version-history" style="overflow-y:auto;"></div>
+      <button id="version-refresh-btn" class="toolbtn">🔄 buscar actualización</button>
+    </div>
+  </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -425,13 +450,17 @@
 
   // ---------- VERSIÓN / NOVEDADES ----------
   // subir APP_VERSION y agregar una entrada acá en cada cambio que valga la pena avisar
-  const APP_VERSION = '1.2.0';
+  const APP_VERSION = '1.3.0';
   const CHANGELOG = {
     '1.1.0': [
       'Backup automático a Descargas cada 5 minutos o cada 5 cuadras marcadas, para que el progreso no se pierda si se borra el historial de Chrome.'
     ],
     '1.2.0': [
       'El backup automático ahora se dispara cada 5 minutos o cada 20 cuadras marcadas (antes eran 5 cuadras), y rota entre 5 archivos en Descargas en vez de acumular uno nuevo por cada backup.'
+    ],
+    '1.3.0': [
+      'El encabezado "BONA · zona norte" ahora es un botón: muestra la versión instalada, el historial de cambios y deja forzar una actualización si el celular se quedó con una versión vieja cacheada.',
+      'El service worker deja de usar la caché HTTP del navegador para pedir archivos nuevos, así los cambios llegan más rápido incluso sin usar el botón de actualizar.'
     ]
   };
   const SEEN_VERSION_KEY = STORAGE_KEY + '-seen-version';
@@ -762,6 +791,47 @@
     }
     try{ localStorage.setItem(SEEN_VERSION_KEY, APP_VERSION); }catch(e){}
   }
+
+  const versionModal = document.getElementById('version-modal');
+  const versionRefreshBtn = document.getElementById('version-refresh-btn');
+
+  function renderVersionHistory(){
+    document.getElementById('version-num-current').textContent = APP_VERSION;
+    const versions = Object.keys(CHANGELOG).reverse(); // más nueva primero
+    document.getElementById('version-history').innerHTML = versions.map(v => `
+      <div class="version-history-group">
+        <div class="v">${v}</div>
+        <ul class="whatsnew-list">${CHANGELOG[v].map(text => `<li>${text}</li>`).join('')}</ul>
+      </div>
+    `).join('');
+  }
+
+  document.getElementById('brand-badge').addEventListener('click', ()=>{
+    renderVersionHistory();
+    versionModal.classList.add('show');
+  });
+  document.getElementById('version-close').addEventListener('click', ()=>{
+    versionModal.classList.remove('show');
+  });
+  versionModal.addEventListener('click', (e)=>{
+    if(e.target === versionModal) versionModal.classList.remove('show');
+  });
+
+  // fuerza al service worker a chequear si hay una versión nueva del sw.js y recarga
+  // ya en limpio, para cuando el celular se queda con la versión vieja cacheada.
+  versionRefreshBtn.addEventListener('click', ()=>{
+    versionRefreshBtn.disabled = true;
+    versionRefreshBtn.textContent = 'actualizando...';
+    const reload = () => location.reload();
+    if('serviceWorker' in navigator){
+      navigator.serviceWorker.getRegistration()
+        .then(reg => reg ? reg.update().catch(()=>{}) : null)
+        .then(reload)
+        .catch(reload);
+    }else{
+      reload();
+    }
+  });
 
   const BURST_PALETTE = ['var(--spray)', 'var(--accent)', 'var(--brand)', 'var(--locate)'];
 
