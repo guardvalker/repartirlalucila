@@ -548,7 +548,60 @@
     }catch(e){
       showStatus('no se pudo guardar en este equipo');
     }
+    maybeAutoBackup();
   }
+
+  // localStorage vive en la misma categoría que "cookies y datos de sitio" en Chrome,
+  // así que se borra junto con el historial aunque la app esté instalada. Este backup
+  // cae como archivo real en Descargas, fuera de esa categoría, y sobrevive esa limpieza.
+  const AUTO_BACKUP_KEY = STORAGE_KEY + '-autobackup';
+  const AUTO_BACKUP_INTERVAL_MS = 5 * 60 * 1000;
+  const AUTO_BACKUP_MIN_NEW_MARKS = 5;
+
+  function buildBackupPayload(){
+    return {
+      app: 'lalucila-progreso',
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      ids: Array.from(markedIds)
+    };
+  }
+
+  function downloadBackup(payload, filenamePrefix){
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type:'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${filenamePrefix}-${new Date().toISOString().slice(0,10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(()=> URL.revokeObjectURL(url), 1000);
+  }
+
+  function maybeAutoBackup(){
+    if(!markedIds.size) return;
+    let meta = { ts: 0, count: 0 };
+    try{
+      const raw = localStorage.getItem(AUTO_BACKUP_KEY);
+      if(raw) meta = JSON.parse(raw);
+    }catch(e){}
+    const newMarks = markedIds.size - meta.count;
+    if(newMarks <= 0) return; // nada nuevo desde el último backup
+    const now = Date.now();
+    const enoughTimePassed = (now - meta.ts) >= AUTO_BACKUP_INTERVAL_MS;
+    const enoughNewMarks = newMarks >= AUTO_BACKUP_MIN_NEW_MARKS;
+    if(!enoughTimePassed && !enoughNewMarks) return;
+    downloadBackup(buildBackupPayload(), 'lalucila-autobackup');
+    try{
+      localStorage.setItem(AUTO_BACKUP_KEY, JSON.stringify({ ts: now, count: markedIds.size }));
+    }catch(e){}
+    showStatus('backup automático guardado en Descargas');
+  }
+
+  // chequeo periódico: si la app queda abierta sin marcar nada por un rato,
+  // igual se dispara el backup por tiempo apenas haya progreso sin respaldar.
+  setInterval(maybeAutoBackup, 60 * 1000);
 
   function styleFor(key){
     const done = markedIds.has(key);
@@ -829,21 +882,7 @@
 
   // ---------- EXPORTAR / IMPORTAR ----------
   document.getElementById('btn-export').addEventListener('click', ()=>{
-    const payload = {
-      app: 'lalucila-progreso',
-      version: 1,
-      exportedAt: new Date().toISOString(),
-      ids: Array.from(markedIds)
-    };
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type:'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `lalucila-progreso-${new Date().toISOString().slice(0,10)}.json`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(()=> URL.revokeObjectURL(url), 1000);
+    downloadBackup(buildBackupPayload(), 'lalucila-progreso');
     showStatus('progreso exportado');
   });
 
